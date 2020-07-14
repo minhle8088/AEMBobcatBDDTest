@@ -1,0 +1,59 @@
+group 'com.citi.aem'
+version '1.0'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+def bobcatVersion = '2.3.0'
+def cucumberVersion = '4.2.6'
+def aemDependency = 'bb-aem-65'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    compile 'junit:junit:4.12'
+    compile group: 'com.cognifide.qa.bb', name: 'bb-core', version: bobcatVersion
+    compile group: 'com.cognifide.qa.bb', name: 'bb-aem-core', version: bobcatVersion
+    compile group: 'com.cognifide.qa.bb', name: aemDependency, version: bobcatVersion
+
+    compile "io.cucumber:cucumber-java:$cucumberVersion"
+    compile "io.cucumber:cucumber-java8:$cucumberVersion"
+    compile "io.cucumber:cucumber-guice:$cucumberVersion"
+}
+
+def cucumberArgs = ['--plugin', 'pretty',
+                    '--plugin', 'html:build/cucumber-html-report',
+                    '--plugin', 'json:build/cucumber-json-report.json',
+                    '--glue', 'com.citi.aem.bobcatbddtest',
+                    'src/test/resources']
+
+def profiles = [
+        'firefox': 'firefox'
+]
+
+configurations {
+    cucumberRuntime {
+        extendsFrom testRuntime
+    }
+}
+
+task cucumber() {
+    def profile = System.getProperty('profile', 'default')
+    if (!profile.equals('default')) {
+        System.setProperty('bobcat.config.contexts', profile)
+    }
+
+    dependsOn assemble, compileJava, compileTestJava
+    doLast {
+        javaexec {
+            main = "cucumber.api.cli.Main"
+            classpath = configurations.cucumberRuntime + sourceSets.main.output + sourceSets.test.output
+            args = cucumberArgs
+            systemProperties = System.getProperties()
+        }
+    }
+}
